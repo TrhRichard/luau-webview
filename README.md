@@ -4,4 +4,4 @@
 
 ## Usage
 
-You must provide a library file for the webview library yourself. The code checks for the file at `bin/webview.[dll/so/dylib]`
+You must provide your own webview library file. The code checks for the file at `bin/webview.[dll/so/dylib]`
