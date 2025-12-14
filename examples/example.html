@@ -1,18 +1,16 @@
 <html>
 	<head> </head>
 	<body>
-		if you cant tell i dont know what to write as an example
-		<span class="webviewver"></span>
-		<button class="the-button">webview version</button>
+		Webview Version: <span class="webview-version">{}</span> <br />
+		<button class="get-version-button">webview version</button>
 	</body>
 	<script>
-		const but = document.querySelector(".the-button");
+		const button = document.querySelector(".get-version-button");
 
-		but.addEventListener("click", async () => {
-			ver = await getWebviewVersion();
-			console.log(ver);
-			document.querySelector(".webviewver").innerHTML =
-				JSON.stringify(ver);
+		button.addEventListener("click", async () => {
+			let versionData = await getWebviewVersion();
+			document.querySelector(".webview-version").innerHTML =
+				JSON.stringify(versionData);
 		});
 	</script>
 </html>

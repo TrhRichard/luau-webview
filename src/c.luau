@@ -94,26 +94,26 @@ local lib = ffi.dlopen(BIN_PATH, {
 local c = {
 	lib = lib,
 	enum = {
-		webview_error_t = {
-			WEBVIEW_ERROR_MISSING_DEPENDENCY = -5,
-			WEBVIEW_ERROR_CANCELED = -4,
-			WEBVIEW_ERROR_INVALID_STATE = -3,
-			WEBVIEW_ERROR_INVALID_ARGUMENT = -2,
-			WEBVIEW_ERROR_UNSPECIFIED = -1,
-			WEBVIEW_ERROR_OK = 0,
-			WEBVIEW_ERROR_DUPLICATE = 1,
-			WEBVIEW_ERROR_NOT_FOUND = 2,
+		error = {
+			MISSING_DEPENDENCY = -5,
+			CANCELED = -4,
+			INVALID_STATE = -3,
+			INVALID_ARGUMENT = -2,
+			UNSPECIFIED = -1,
+			OK = 0,
+			DUPLICATE = 1,
+			NOT_FOUND = 2,
 		},
-		webview_hint_t = {
-			WEBVIEW_HINT_NONE = 0,
-			WEBVIEW_HINT_MIN = 1,
-			WEBVIEW_HINT_MAX = 2,
-			WEBVIEW_HINT_FIXED = 3,
+		hint = {
+			NONE = 0,
+			MIN = 1,
+			MAX = 2,
+			FIXED = 3,
 		},
-		webview_native_handle_kind_t = {
-			WEBVIEW_NATIVE_HANDLE_KIND_UI_WINDOW = 0,
-			WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET = 1,
-			WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER = 2,
+		native_handle_kind = {
+			UI_WINDOW = 0,
+			UI_WIDGET = 1,
+			BROWSER_CONTROLLER = 2,
 		},
 	},
 	structs = structs,
