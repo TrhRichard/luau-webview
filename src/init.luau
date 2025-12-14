@@ -28,7 +28,7 @@ export type WebviewVersionInfo = {
 	preRelease: string,
 	buildMetadata: string,
 }
-type UserArgument = FFIPointer | string | buffer
+type cstring = FFIPointer | string | buffer
 
 --- Destroys a webview instance and closes the native window.
 function webview.prototype.destroy(self: WebviewWindow): WebviewError
@@ -74,8 +74,8 @@ function webview.prototype.getNativeHandle(self: WebviewWindow, kind: number): F
 end
 
 --- Updates the title of the native window.
-function webview.prototype.setTitle(self: WebviewWindow, title: string): WebviewError
-	self.title = title
+function webview.prototype.setTitle(self: WebviewWindow, title: cstring): WebviewError
+	self.title = title :: string
 	return c.lib.webview_set_title(self.handle, title)
 end
 
@@ -86,25 +86,25 @@ function webview.prototype.setSize(self: WebviewWindow, size: vector, hint: numb
 end
 
 --- Navigates webview to the given URL. URL may be a properly encoded data URI.
-function webview.prototype.navigate(self: WebviewWindow, url: string): WebviewError
+function webview.prototype.navigate(self: WebviewWindow, url: cstring): WebviewError
 	return c.lib.webview_navigate(self.handle, url)
 end
 
 --- Load HTML content into the webview.
-function webview.prototype.setHtml(self: WebviewWindow, html: string): WebviewError
+function webview.prototype.setHtml(self: WebviewWindow, html: cstring): WebviewError
 	return c.lib.webview_set_html(self.handle, html)
 end
 
 --- Injects JavaScript code to be executed immediately upon loading a page.
 --- The code will be executed before `window.onload`.
-function webview.prototype.init(self: WebviewWindow, js: string): WebviewError
+function webview.prototype.init(self: WebviewWindow, js: cstring): WebviewError
 	return c.lib.webview_init(self.handle, js)
 end
 
 --- Evaluates arbitrary JavaScript code.
 ---
 --- Use bindings if you need to communicate the result of the evaluation.
-function webview.prototype.eval(self: WebviewWindow, js: string): WebviewError
+function webview.prototype.eval(self: WebviewWindow, js: cstring): WebviewError
 	return c.lib.webview_eval(self.handle, js)
 end
 
@@ -115,7 +115,7 @@ type BindFn = (...any) -> any?
 --- given name. The callback function is passed a request identifier,
 --- a request string and a user-provided argument. The request string is
 --- a JSON array of the arguments passed to the JS function.
-function webview.prototype.bind(self: WebviewWindow, name: string, fn: BindFn): WebviewError
+function webview.prototype.bind(self: WebviewWindow, name: cstring, fn: BindFn): WebviewError
 	local cFunc = ffi.closure({
 		returns = ffi.types.void,
 		args = { WEBVIEW_T, cstring, cstring, ffi.types.pointer },
@@ -129,7 +129,7 @@ function webview.prototype.bind(self: WebviewWindow, name: string, fn: BindFn): 
 end
 
 --- Removes a binding created with webview.bind().
-function webview.prototype.unbind(self: WebviewWindow, name: string): WebviewError
+function webview.prototype.unbind(self: WebviewWindow, name: cstring): WebviewError
 	return c.lib.webview_unbind(self.handle, name)
 end
 
@@ -173,7 +173,7 @@ end
 --- Creates a new webview instance.
 ---
 --- Size defaults to (800, 600) if not set.
-local function createWebview(debug: boolean, size: vector?, window: FFIPointer?): WebviewWindow
+local function createWebview(debug: boolean?, size: vector?, window: FFIPointer?): WebviewWindow
 	local instanceHandle: WebviewWindowInstance = c.lib.webview_create(if debug then 1 else 0, window)
 	local size = size or vector.create(800, 600)
 
