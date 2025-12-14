@@ -7,11 +7,17 @@ local WEBVIEW_T = ffi.types.pointer
 local cstring = ffi.types.pointer
 
 local webview = {
-	c = c,
+	prototype = {},
 }
+webview.meta = { __index = webview.prototype }
 
-export type WebviewWindowInstance = FFIPointer
+type WebviewWindowInstance = FFIPointer
 export type WebviewError = number
+export type WebviewWindow = setmetatable<{
+	title: string,
+	size: vector,
+	handle: WebviewWindowInstance,
+}, typeof(webview.meta)>
 export type WebviewVersionInfo = {
 	version: {
 		major: number,
@@ -24,119 +30,111 @@ export type WebviewVersionInfo = {
 }
 type UserArgument = FFIPointer | string | buffer
 
---- Creates a new webview instance.
-function webview.create(debug: boolean, window: FFIPointer?): WebviewWindowInstance
-	return c.lib.webview_create(if debug then 1 else 0, window)
-end
-
 --- Destroys a webview instance and closes the native window.
-function webview.destroy(window: WebviewWindowInstance): WebviewError
-	return c.lib.webview_destroy(window)
+function webview.prototype.destroy(self: WebviewWindow): WebviewError
+	return c.lib.webview_destroy(self.handle)
 end
 
 --- Runs the main loop until it's terminated.
-function webview.run(window: WebviewWindowInstance): WebviewError
-	return c.lib.webview_run(window)
+function webview.prototype.run(self: WebviewWindow): WebviewError
+	return c.lib.webview_run(self.handle)
 end
 
 --- Stops the main loop. It is safe to call this function from another background thread.
-function webview.terminate(window: WebviewWindowInstance): WebviewError
-	return c.lib.webview_terminate(window)
+function webview.prototype.terminate(self: WebviewWindow): WebviewError
+	return c.lib.webview_terminate(self.handle)
 end
-
-type DispatchFn = (w: WebviewWindowInstance, arg: FFIPointer) -> ()
 
 --- Schedules a function to be invoked on the thread with the run/event loop.
 ---
 --- Since library functions generally do not have thread safety guarantees,
 --- this function can be used to schedule code to execute on the main/GUI
 --- thread and thereby make that execution safe in multi-threaded applications.
-function webview.dispatch(window: WebviewWindowInstance, fn: DispatchFn, arg: UserArgument?): WebviewError
+function webview.prototype.dispatch(self: WebviewWindow, fn: () -> ()): WebviewError
 	local cFunc = ffi.closure({
 		returns = ffi.types.void,
 		args = { WEBVIEW_T, ffi.types.pointer },
-	}, fn)
+	}, function(_: WebviewWindowInstance, _)
+		fn()
+	end)
 
-	return c.lib.webview_dispatch(window, cFunc, arg)
+	return c.lib.webview_dispatch(self.handle, cFunc, nil)
 end
 
 --- Returns the native handle of the window associated with the webview instance.
 --- The handle can be a `GtkWindow` pointer (GTK), `NSWindow` pointer (Cocoa)
 --- or `HWND` (Win32).
-function webview.getWindow(window: WebviewWindowInstance): FFIPointer
-	return c.lib.webview_get_window(window)
+function webview.prototype.getWindow(self: WebviewWindow): FFIPointer
+	return c.lib.webview_get_window(self.handle)
 end
 
 --- Get a native handle of choice.
-function webview.getNativeHandle(window: WebviewWindowInstance, kind: number): FFIPointer
-	return c.lib.webview_get_native_handle(window, kind)
+function webview.prototype.getNativeHandle(self: WebviewWindow, kind: number): FFIPointer
+	return c.lib.webview_get_native_handle(self.handle, kind)
 end
 
 --- Updates the title of the native window.
-function webview.setTitle(window: WebviewWindowInstance, title: string): WebviewError
-	return c.lib.webview_set_title(window, title)
+function webview.prototype.setTitle(self: WebviewWindow, title: string): WebviewError
+	self.title = title
+	return c.lib.webview_set_title(self.handle, title)
 end
 
 --- Updates the size of the native window.
-function webview.setSize(window: WebviewWindowInstance, width: number, height: number, hint: number): WebviewError
-	return c.lib.webview_set_size(window, width, height, hint)
+function webview.prototype.setSize(self: WebviewWindow, size: vector, hint: number): WebviewError
+	self.size = size
+	return c.lib.webview_set_size(self.handle, size.x, size.y, hint)
 end
 
 --- Navigates webview to the given URL. URL may be a properly encoded data URI.
-function webview.navigate(window: WebviewWindowInstance, url: string): WebviewError
-	return c.lib.webview_navigate(window, url)
+function webview.prototype.navigate(self: WebviewWindow, url: string): WebviewError
+	return c.lib.webview_navigate(self.handle, url)
 end
 
 --- Load HTML content into the webview.
-function webview.setHtml(window: WebviewWindowInstance, html: string): WebviewError
-	return c.lib.webview_set_html(window, html)
+function webview.prototype.setHtml(self: WebviewWindow, html: string): WebviewError
+	return c.lib.webview_set_html(self.handle, html)
 end
 
 --- Injects JavaScript code to be executed immediately upon loading a page.
 --- The code will be executed before `window.onload`.
-function webview.init(window: WebviewWindowInstance, js: string): WebviewError
-	return c.lib.webview_init(window, js)
+function webview.prototype.init(self: WebviewWindow, js: string): WebviewError
+	return c.lib.webview_init(self.handle, js)
 end
 
 --- Evaluates arbitrary JavaScript code.
 ---
 --- Use bindings if you need to communicate the result of the evaluation.
-function webview.eval(window: WebviewWindowInstance, js: string): WebviewError
-	return c.lib.webview_eval(window, js)
+function webview.prototype.eval(self: WebviewWindow, js: string): WebviewError
+	return c.lib.webview_eval(self.handle, js)
 end
 
-type BindFn = (id: string, req: RequestData, arg: FFIPointer) -> ()
-type RequestData = { any }
+type BindFn = (...any) -> any?
 --- Binds a function pointer to a new global JavaScript function.
 ---
 --- Internally, JS glue code is injected to create the JS function by the
 --- given name. The callback function is passed a request identifier,
 --- a request string and a user-provided argument. The request string is
 --- a JSON array of the arguments passed to the JS function.
-function webview.bind(window: WebviewWindowInstance, name: string, fn: BindFn, arg: UserArgument?): WebviewError
+function webview.prototype.bind(self: WebviewWindow, name: string, fn: BindFn): WebviewError
 	local cFunc = ffi.closure({
 		returns = ffi.types.void,
 		args = { WEBVIEW_T, cstring, cstring, ffi.types.pointer },
 	}, function(id: FFIPointer, req: FFIPointer, arg: FFIPointer)
-		fn(buffer.tostring(id:span()), serde.json.decode(buffer.tostring(req:span()), { preserve_null = true }), arg)
+		local success, returnOrErr =
+			pcall(fn, table.unpack(serde.json.decode(buffer.tostring(req:span()), { preserve_null = true })))
+
+		c.lib.webview_return(self.handle, id, if success then 0 else 1, serde.json.encode(returnOrErr))
 	end)
-	return c.lib.webview_bind(window, name, cFunc, arg)
+	return c.lib.webview_bind(self.handle, name, cFunc, nil)
 end
 
 --- Removes a binding created with webview.bind().
-function webview.unbind(window: WebviewWindowInstance, name: string): WebviewError
-	return c.lib.webview_unbind(window, name)
+function webview.prototype.unbind(self: WebviewWindow, name: string): WebviewError
+	return c.lib.webview_unbind(self.handle, name)
 end
 
---- Responds to a binding call from the JS side.
----
---- This function is safe to call from another thread.
-function webview.return_(window: WebviewWindowInstance, id: string, status: number, result: string): WebviewError
-	return c.lib.webview_return(window, id, status, result)
-end
-
---- Get the library's version information.
-function webview.version(): WebviewVersionInfo
+--- Get the webview library's version information.
+local function webviewVersion(): WebviewVersionInfo
 	local versionInfoPtr: FFIPointer = c.lib.webview_version()
 	versionInfoPtr:size(c.structs.webview_version_info_t:size())
 
@@ -146,6 +144,8 @@ function webview.version(): WebviewVersionInfo
 		c.structs.webview_version_t:size()
 	)
 
+	local emptyChar = buffer.create(4)
+
 	return {
 		version = {
 			major = buffer.readu32(versionBfr, c.structs.webview_version_t:offset("major")),
@@ -153,15 +153,38 @@ function webview.version(): WebviewVersionInfo
 			patch = buffer.readu32(versionBfr, c.structs.webview_version_t:offset("patch")),
 		},
 		versionNumber = buffer.tostring(
-			mem.slice(versionInfoPtr, c.structs.webview_version_info_t:offset("version_number"), 32)
+			mem.trim(
+				mem.slice(versionInfoPtr, c.structs.webview_version_info_t:offset("version_number"), 32),
+				emptyChar
+			)
 		),
 		preRelease = buffer.tostring(
-			mem.slice(versionInfoPtr, c.structs.webview_version_info_t:offset("pre_release"), 48)
+			mem.trim(mem.slice(versionInfoPtr, c.structs.webview_version_info_t:offset("pre_release"), 48), emptyChar)
 		),
 		buildMetadata = buffer.tostring(
-			mem.slice(versionInfoPtr, c.structs.webview_version_info_t:offset("build_metadata"), 48)
+			mem.trim(
+				mem.slice(versionInfoPtr, c.structs.webview_version_info_t:offset("build_metadata"), 48),
+				emptyChar
+			)
 		),
 	}
 end
 
-return webview
+--- Creates a new webview instance.
+---
+--- Size defaults to (800, 600) if not set.
+local function createWebview(debug: boolean, size: vector?, window: FFIPointer?): WebviewWindow
+	local instanceHandle: WebviewWindowInstance = c.lib.webview_create(if debug then 1 else 0, window)
+	local size = size or vector.create(800, 600)
+
+	c.lib.webview_set_size(instanceHandle, size.x, size.y, c.enum.hint.NONE)
+
+	return setmetatable({ handle = instanceHandle, title = "", size = size }, webview.meta)
+end
+
+return {
+	c = c,
+	enum = c.enum,
+	version = webviewVersion,
+	new = createWebview,
+}

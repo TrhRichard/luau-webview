@@ -2,14 +2,15 @@ local process = zune.process
 
 local webview = require("../src")
 
-local window = webview.create(false)
+local window = webview.new(false)
 process.onSignal("INT", function()
-	webview.terminate(window)
+	window:terminate(window)
+	window:destroy()
 	process.exit(0)
 end)
 
-webview.setTitle(window, "Basic Example")
-webview.setSize(window, 480, 320, webview.c.enum.hint.NONE)
-webview.setHtml(window, "Thanks for using webview!")
+window:setTitle("Basic Example")
+window:setSize(vector.create(480, 320), webview.enum.hint.NONE)
+window:setHtml("Thanks for using webview!")
 
-webview.run(window)
+window:run()

@@ -1,23 +1,22 @@
 local process = zune.process
-local serde = zune.serde
+local fs = zune.fs
 
 local webview = require("../src")
 
-local exampleHtmlPath = zune.fs.realPath("examples/example.html")
-
-local window = webview.create(false)
+local window = webview.new(false)
 process.onSignal("INT", function()
-	webview.terminate(window)
+	window:terminate()
+	window:destroy()
 	process.exit(0)
 end)
 
-webview.setTitle(window, "Example Webview")
+window:setTitle("Webview HTML File Example")
 
-webview.bind(window, "getWebviewVersion", function(id: string, req, arg: FFIPointer)
-	local versionInfo = webview.version()
-	webview.return_(window, id, 0, serde.json.encode(versionInfo.version))
+window:bind("getWebviewVersion", function()
+	local webviewVersion = webview.version()
+	return webviewVersion :: any
 end)
 
-webview.navigate(window, exampleHtmlPath)
+window:navigate(fs.realPath("examples/example.html"))
 
-webview.run(window)
+window:run()
