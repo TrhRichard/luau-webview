@@ -1,6 +1,6 @@
 local ffi = zune.ffi
 
-local BIN_PATH = `bin/webview.{ffi.suffix}`
+local BIN_PATH = `bin/{ffi.prefix}webview.{ffi.suffix}`
 
 local WEBVIEW_ERROR_T = ffi.types.i32
 local WEBVIEW_T = ffi.types.pointer
